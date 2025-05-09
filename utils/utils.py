@@ -1,5 +1,7 @@
 import pandas as pd
 import networkx as nx
+import community as community_louvain
+from collections import Counter
 
 
 def load_stations_df(csv_filename: str):
@@ -32,6 +34,17 @@ def add_geolocations(df, geolocations_filename):
     geo_locations = pd.read_csv(geolocations_filename)
     geo_locations['station_id'] = geo_locations['num_cicloestacion'].astype(str).str.zfill(3)
 
+    geo_with_communities = geo_locations.merge(df, on='station_id', how='inner')
+    return geo_with_communities
 
 
+def detect_communities(graph_undirected):
 
+    partition = community_louvain.best_partition(graph_undirected, weight='weight')
+    community_sizes = Counter(partition.values())
+
+    community_df = pd.DataFrame.from_dict(partition, orient='index', columns=['community'])
+    community_df.reset_index(inplace=True)
+    community_df.rename(columns={'index': 'station_id'}, inplace=True)
+
+    return community_df, partition, community_sizes
